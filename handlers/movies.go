@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/Dungsenpai-ux/Practice_Go/db"
 	"github.com/Dungsenpai-ux/Practice_Go/models"
 	"net/http"
