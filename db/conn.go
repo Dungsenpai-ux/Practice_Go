@@ -8,7 +8,7 @@ import (
 var Pool *pgxpool.Pool
 
 func Connect() error {
-	dsn := "postgres://postgres:123@localhost:5432/movies_db?sslmode=disable" // Cập nhật mật khẩu
+	dsn := "postgres://postgres:123456@localhost:5432/movies_db?sslmode=disable" // Cập nhật mật khẩu
 	config, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		return err

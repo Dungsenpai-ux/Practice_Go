@@ -21,7 +21,7 @@ import (
 )
 
 func runMigrations() error {
-	m, err := migrate.New("file://migrations", "postgres://postgres:123@localhost:5432/movies_db?sslmode=disable")
+	m, err := migrate.New("file://migrations", "postgres://postgres:123456@localhost:5432/movies_db?sslmode=disable")
 	if err != nil {
 		return err
 	}
