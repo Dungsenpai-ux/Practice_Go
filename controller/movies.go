@@ -1,21 +1,22 @@
-package handlers
+package controller
 
 import (
 	"encoding/json"
-	"github.com/Dungsenpai-ux/Practice_Go/db"
-	"github.com/Dungsenpai-ux/Practice_Go/models"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/Dungsenpai-ux/Practice_Go/model"
+	"github.com/Dungsenpai-ux/Practice_Go/service"
 )
 
 func CreateMovie(w http.ResponseWriter, r *http.Request) {
-	var movie models.Movie
+	var movie model.Movie
 	if err := json.NewDecoder(r.Body).Decode(&movie); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	id, err := db.InsertMovie(r.Context(), movie)
+	id, err := service.InsertMovie(r.Context(), movie)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -31,7 +32,7 @@ func GetMovie(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "ID không hợp lệ", http.StatusBadRequest)
 		return
 	}
-	movie, err := db.GetMovieByID(r.Context(), id)
+	movie, err := service.GetMovieByID(r.Context(), id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -46,7 +47,7 @@ func SearchMovies(w http.ResponseWriter, r *http.Request) {
 	if yearStr != "" {
 		year, _ = strconv.Atoi(yearStr)
 	}
-	movies, err := db.SearchMovies(r.Context(), q, year)
+	movies, err := service.SearchMovies(r.Context(), q, year)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
