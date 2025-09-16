@@ -13,9 +13,8 @@ func main() {
 	// Khởi tạo cấu hình
 	cfg := config.NewConfig()
 
-	// Đăng ký endpoint health
-	healthController := controller.NewHealthController(cfg)
-	r.GET("/healthz", healthController.HealthCheck)
+	// Gọi hàm setup routes
+	controller.SetupRoutes(r, cfg)
 
 	// Khởi chạy server
 	r.Run(":8080")
