@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	// "github.com/gin-gonic/gin"
+	"fmt"
 	"github.com/Dungsenpai-ux/Practice_Go/service"
 	"github.com/Dungsenpai-ux/Practice_Go/controller"
 	"github.com/Dungsenpai-ux/Practice_Go/model"
@@ -16,14 +17,25 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 func runMigrations() error {
-	m, err := migrate.New("file://migrations", "postgres://postgres:123456@localhost:5432/movies_db?sslmode=disable")
+	// Lấy các giá trị từ biến môi trường
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbName := os.Getenv("DB_NAME")
+	dbSSLMode := os.Getenv("DB_SSLMODE")
+
+	// Xây dựng chuỗi DSN
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		dbUser, dbPassword, dbHost, dbPort, dbName, dbSSLMode)
+
+	m, err := migrate.New("file://migrations", dsn)
 	if err != nil {
 		return err
 	}
@@ -96,6 +108,7 @@ func main() {
 	log.Println("Máy chủ khởi động tại :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
+
 // func main() {
 // 	// Khởi tạo router Gin
 // 	r := gin.Default()
