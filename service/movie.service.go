@@ -3,9 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/Dungsenpai-ux/Practice_Go/config"
 	"github.com/Dungsenpai-ux/Practice_Go/model"
@@ -64,43 +62,4 @@ func MeasureQuery(ctx context.Context, query string, args ...interface{}) (strin
 		explain.WriteString(line + "\n")
 	}
 	return explain.String(), nil
-}
-
-func GetMoviesByCursor(ctx context.Context, cursor string, size int) ([]model.Movie, string, error) {
-	var rows pgx.Rows
-	var err error
-	var nextCursor string
-
-	if cursor == "" {
-		rows, err = config.Pool.Query(ctx, "SELECT id, title, year, genres FROM movies ORDER BY id LIMIT $1", size)
-	} else {
-		rows, err = config.Pool.Query(ctx, "SELECT id, title, year, genres FROM movies WHERE id > $1 ORDER BY id LIMIT $2", cursor, size)
-	}
-
-	if err != nil {
-		return nil, "", err
-	}
-	defer rows.Close()
-
-	var movies []model.Movie
-	for rows.Next() {
-		var movie model.Movie
-		if err := rows.Scan(&movie.ID, &movie.Title, &movie.Year, &movie.Genres); err != nil {
-			return nil, "", err
-		}
-		movies = append(movies, movie)
-		nextCursor = strconv.Itoa(movie.ID)
-	}
-	return movies, nextCursor, rows.Err()
-}
-
-func LogQueryPerformance(ctx context.Context, query string, args ...interface{}) {
-	start := time.Now()
-	_, err := config.Pool.Query(ctx, query, args...)
-	duration := time.Since(start)
-	if err != nil {
-		fmt.Printf("Query failed: %v\n", err)
-	} else {
-		fmt.Printf("Query executed in: %v\n", duration)
-	}
 }
