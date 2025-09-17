@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
@@ -26,9 +29,13 @@ func Connect() error {
 	dbName := os.Getenv("DB_NAME")
 	dbSSLMode := os.Getenv("DB_SSLMODE")
 
-
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		dbUser, dbPassword, dbHost, dbPort, dbName, dbSSLMode)
+
+	// Run migrations before establishing the pool to ensure schema is up to date
+	if err := runMigrations(dsn); err != nil {
+		return err
+	}
 
 	config, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
@@ -45,4 +52,15 @@ func Close() {
 	if Pool != nil {
 		Pool.Close()
 	}
+}
+
+func runMigrations(dsn string) error {
+	m, err := migrate.New("file://service/migrations", dsn)
+	if err != nil {
+		return err
+	}
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+	return nil
 }

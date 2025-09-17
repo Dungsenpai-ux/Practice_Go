@@ -3,10 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5"
-	"github.com/Dungsenpai-ux/Practice_Go/model"
-	"github.com/Dungsenpai-ux/Practice_Go/config"
 	"strings"
+
+	"github.com/Dungsenpai-ux/Practice_Go/config"
+	"github.com/Dungsenpai-ux/Practice_Go/model"
+	"github.com/jackc/pgx/v5"
 )
 
 func InsertMovie(ctx context.Context, movie model.Movie) (int, error) {
