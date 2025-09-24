@@ -2,16 +2,24 @@ package controller
 
 import (
 	"encoding/json"
+
 	"fmt"
 	"log"
+
+
 	"net/http"
 	"strconv"
 	"strings"
+
 
 	"github.com/Dungsenpai-ux/Practice_Go/config"
 	"github.com/Dungsenpai-ux/Practice_Go/model"
 	"github.com/Dungsenpai-ux/Practice_Go/service"
 	"github.com/bradfitz/gomemcache/memcache"
+
+	"github.com/Dungsenpai-ux/Practice_Go/model"
+	"github.com/Dungsenpai-ux/Practice_Go/service"
+
 )
 
 func CreateMovie(w http.ResponseWriter, r *http.Request) {
@@ -25,6 +33,7 @@ func CreateMovie(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	// Invalidate cache for the new movie
 	if config.Memcached != nil {
 		cacheKey := fmt.Sprintf("movie:%d", id)
@@ -32,6 +41,7 @@ func CreateMovie(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Error invalidating cache for %s: %v", cacheKey, err)
 		}
 	}
+
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]int{"id": id})
 }
@@ -43,6 +53,7 @@ func GetMovie(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "ID không hợp lệ", http.StatusBadRequest)
 		return
 	}
+
 
 	// Check cache first
 	if config.Memcached != nil {
@@ -103,6 +114,13 @@ func GetMovie(w http.ResponseWriter, r *http.Request) {
 				log.Printf("Error setting cache for %s: %v", cacheKey, err)
 			}
 		}
+	}
+
+
+	movie, err := service.GetMovieByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
 	}
 
 	json.NewEncoder(w).Encode(movie)
