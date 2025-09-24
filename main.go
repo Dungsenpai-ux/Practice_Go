@@ -12,7 +12,6 @@ import (
 	//"github.com/gin-gonic/gin"
 )
 
-=======
 	"github.com/gin-gonic/gin"
 )
 
@@ -76,8 +75,6 @@ func main() {
 // 	// Khởi chạy server
 // 	r.Run(":8080")
 // }
-=======
-
 	// Khởi tạo router Gin
 	r := gin.Default()
 
