@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"expvar"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,6 +12,14 @@ import (
 
 	"github.com/Dungsenpai-ux/Practice_Go/model"
 	"github.com/bradfitz/gomemcache/memcache"
+)
+
+var (
+	cacheHits        = expvar.NewInt("cache_hits")
+	cacheMisses      = expvar.NewInt("cache_misses")
+	cacheErrors      = expvar.NewInt("cache_errors")
+	cacheNegatives   = expvar.NewInt("cache_negative_writes")
+	cacheWriteErrors = expvar.NewInt("cache_write_errors")
 )
 
 // MovieHandler aggregates dependencies for movie endpoints
@@ -66,6 +75,7 @@ func (h *MovieHandler) GetMovie(w http.ResponseWriter, r *http.Request) {
 		item, err := h.Cache.Get(cacheKey)
 		switch err {
 		case nil:
+			cacheHits.Add(1)
 			log.Printf("Cache hit for %s", cacheKey)
 			var movie model.Movie
 			if err := json.Unmarshal(item.Value, &movie); err == nil {
@@ -77,9 +87,12 @@ func (h *MovieHandler) GetMovie(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			log.Printf("Error unmarshaling cached movie: %v", err)
+			cacheErrors.Add(1)
 		case memcache.ErrCacheMiss:
+			cacheMisses.Add(1)
 			log.Printf("Cache miss for %s", cacheKey)
 		default:
+			cacheErrors.Add(1)
 			log.Printf("Error checking cache for %s: %v", cacheKey, err)
 		}
 	}
@@ -89,7 +102,10 @@ func (h *MovieHandler) GetMovie(w http.ResponseWriter, r *http.Request) {
 		item := &memcache.Item{Key: cacheKey, Value: []byte(`{"error":"không tìm thấy phim"}`), Expiration: 30}
 		if h.Cache != nil {
 			if err := h.Cache.Set(item); err != nil {
+				cacheWriteErrors.Add(1)
 				log.Printf("Error setting negative cache for %s: %v", cacheKey, err)
+			} else {
+				cacheNegatives.Add(1)
 			}
 		}
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -98,11 +114,13 @@ func (h *MovieHandler) GetMovie(w http.ResponseWriter, r *http.Request) {
 	if h.Cache != nil {
 		data, err := json.Marshal(movie)
 		if err != nil {
+			cacheErrors.Add(1)
 			log.Printf("Error marshaling movie for cache: %v", err)
 		} else {
 			cacheKey := fmt.Sprintf("movie:%d", id)
 			item := &memcache.Item{Key: cacheKey, Value: data, Expiration: int32(5 * 60)}
 			if err := h.Cache.Set(item); err != nil {
+				cacheWriteErrors.Add(1)
 				log.Printf("Error setting cache for %s: %v", cacheKey, err)
 			}
 		}
