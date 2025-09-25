@@ -2,23 +2,28 @@
 
 Phần `http_api` áp dụng **Layered Pattern**, chia thành 3 tầng chính:
 
-Controller (Presentation):
+---
 
-Nhận request, xử lý nghiệp vụ và trả về response
-Chịu trách nhiệm cho việc xác thực và phân quyền
-Chuyển đổi dữ liệu giữa DTO (Data Transfer Objects) và model
-Model:
+## 1. Controller (Presentation)
+- Nhận request, xử lý nghiệp vụ và trả về response.
+- Chịu trách nhiệm xác thực và phân quyền.
+- Chuyển đổi dữ liệu giữa **DTO** (Data Transfer Objects) và **model**.
 
-Chứa data model của service
-Định nghĩa các entity và mối quan hệ giữa chúng
-Chứa các method để validate dữ liệu
-Service:
+## 2. Model
+- Chứa data model của service.
+- Định nghĩa các entity và mối quan hệ giữa chúng.
+- Chứa các method để validate dữ liệu.
 
-Tương tác với cơ sở dữ liệu (ví dụ: PostgreSQL, MongoDB, Redis)
-Tích hợp với dịch vụ bên thứ ba (Twilio, email,...)
-Gọi đến các service khác trong hệ thống microservice
+## 3. Service
+- Tương tác với cơ sở dữ liệu (ví dụ: PostgreSQL, MongoDB, Redis).
+- Tích hợp với dịch vụ bên thứ ba (Twilio, email, ...).
+- Gọi đến các service khác trong hệ thống microservice.
 
+---
 
+## Cấu trúc thư mục
+
+```plaintext
 /config
     config.go           # Cấu hình và biến môi trường
 /controller
@@ -33,3 +38,10 @@ Gọi đến các service khác trong hệ thống microservice
         db.go           # Khởi tạo kết nối DB
     [external].go       # Tích hợp với dịch vụ bên ngoài
 main.go                 # Entry point của ứng dụng
+```
+
+---
+
+> **Lưu ý:**  
+> - Các tầng được tách biệt rõ ràng giúp dễ dàng bảo trì, mở rộng và kiểm thử.  
+> - Tuân thủ mô hình này giúp tăng tính module hóa và quản lý code hiệu quả hơn trong các dự án Go microservice.
