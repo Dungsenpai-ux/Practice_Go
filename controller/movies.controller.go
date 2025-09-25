@@ -17,8 +17,6 @@ import (
 	"github.com/Dungsenpai-ux/Practice_Go/service"
 	"github.com/bradfitz/gomemcache/memcache"
 
-	"github.com/Dungsenpai-ux/Practice_Go/model"
-	"github.com/Dungsenpai-ux/Practice_Go/service"
 
 )
 
@@ -117,7 +115,7 @@ func GetMovie(w http.ResponseWriter, r *http.Request) {
 	}
 
 
-	movie, err := service.GetMovieByID(r.Context(), id)
+	movie, err = service.GetMovieByID(r.Context(), id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
