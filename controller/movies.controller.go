@@ -1,72 +1,77 @@
 package controller
 
 import (
+	"context"
 	"encoding/json"
-
 	"fmt"
 	"log"
-
-
 	"net/http"
 	"strconv"
 	"strings"
 
-
-	"github.com/Dungsenpai-ux/Practice_Go/config"
 	"github.com/Dungsenpai-ux/Practice_Go/model"
-	"github.com/Dungsenpai-ux/Practice_Go/service"
 	"github.com/bradfitz/gomemcache/memcache"
-
-
 )
 
-func CreateMovie(w http.ResponseWriter, r *http.Request) {
-	var movie model.Movie
-	if err := json.NewDecoder(r.Body).Decode(&movie); err != nil {
+// MovieHandler aggregates dependencies for movie endpoints
+type MovieHandler struct {
+	Service interface {
+		InsertMovie(ctx context.Context, movie model.Movie) (int, error)
+		GetMovieByID(ctx context.Context, id int) (model.Movie, error)
+		SearchMovies(ctx context.Context, q string, year int) ([]model.Movie, error)
+	}
+	Cache *memcache.Client
+}
+
+// NewMovieHandler builds a handler instance
+func NewMovieHandler(s interface {
+	InsertMovie(ctx context.Context, movie model.Movie) (int, error)
+	GetMovieByID(ctx context.Context, id int) (model.Movie, error)
+	SearchMovies(ctx context.Context, q string, year int) ([]model.Movie, error)
+}, cache *memcache.Client) *MovieHandler {
+	return &MovieHandler{Service: s, Cache: cache}
+}
+
+func (h *MovieHandler) CreateMovie(w http.ResponseWriter, r *http.Request) {
+	var req MovieCreateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	id, err := service.InsertMovie(r.Context(), movie)
+	movieModel := req.ToModel()
+	id, err := h.Service.InsertMovie(r.Context(), movieModel)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	// Invalidate cache for the new movie
-	if config.Memcached != nil {
+	if h.Cache != nil {
 		cacheKey := fmt.Sprintf("movie:%d", id)
-		if err := config.Memcached.Delete(cacheKey); err != nil && err != memcache.ErrCacheMiss {
+		if err := h.Cache.Delete(cacheKey); err != nil && err != memcache.ErrCacheMiss {
 			log.Printf("Error invalidating cache for %s: %v", cacheKey, err)
 		}
 	}
-
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]int{"id": id})
 }
 
-func GetMovie(w http.ResponseWriter, r *http.Request) {
+func (h *MovieHandler) GetMovie(w http.ResponseWriter, r *http.Request) {
 	idStr := strings.TrimPrefix(r.URL.Path, "/movies/")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, "ID không hợp lệ", http.StatusBadRequest)
 		return
 	}
-
-
-	// Check cache first
-	if config.Memcached != nil {
+	if h.Cache != nil {
 		cacheKey := fmt.Sprintf("movie:%d", id)
-		item, err := config.Memcached.Get(cacheKey)
+		item, err := h.Cache.Get(cacheKey)
 		switch err {
 		case nil:
-			// Cache hit
 			log.Printf("Cache hit for %s", cacheKey)
 			var movie model.Movie
 			if err := json.Unmarshal(item.Value, &movie); err == nil {
-				json.NewEncoder(w).Encode(movie)
+				json.NewEncoder(w).Encode(FromModel(movie))
 				return
 			}
-			// Negative cache hit
 			if string(item.Value) == `{"error":"không tìm thấy phim"}` {
 				http.Error(w, "không tìm thấy phim", http.StatusNotFound)
 				return
@@ -78,63 +83,44 @@ func GetMovie(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Error checking cache for %s: %v", cacheKey, err)
 		}
 	}
-
-	// Cache miss, query database
-	movie, err := service.GetMovieByID(r.Context(), id)
+	movie, err := h.Service.GetMovieByID(r.Context(), id)
 	if err != nil {
-		// Negative cache for not found
 		cacheKey := fmt.Sprintf("movie:%d", id)
-		item := &memcache.Item{
-			Key:        cacheKey,
-			Value:      []byte(`{"error":"không tìm thấy phim"}`),
-			Expiration: 30, // TTL 30 seconds
-		}
-		if err := config.Memcached.Set(item); err != nil {
-			log.Printf("Error setting negative cache for %s: %v", cacheKey, err)
+		item := &memcache.Item{Key: cacheKey, Value: []byte(`{"error":"không tìm thấy phim"}`), Expiration: 30}
+		if h.Cache != nil {
+			if err := h.Cache.Set(item); err != nil {
+				log.Printf("Error setting negative cache for %s: %v", cacheKey, err)
+			}
 		}
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-
-	// Cache the movie
-	if config.Memcached != nil {
+	if h.Cache != nil {
 		data, err := json.Marshal(movie)
 		if err != nil {
 			log.Printf("Error marshaling movie for cache: %v", err)
 		} else {
 			cacheKey := fmt.Sprintf("movie:%d", id)
-			item := &memcache.Item{
-				Key:        cacheKey,
-				Value:      data,
-				Expiration: int32(5 * 60), // TTL 5 minutes
-			}
-			if err := config.Memcached.Set(item); err != nil {
+			item := &memcache.Item{Key: cacheKey, Value: data, Expiration: int32(5 * 60)}
+			if err := h.Cache.Set(item); err != nil {
 				log.Printf("Error setting cache for %s: %v", cacheKey, err)
 			}
 		}
 	}
-
-
-	movie, err = service.GetMovieByID(r.Context(), id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
-
-	json.NewEncoder(w).Encode(movie)
+	json.NewEncoder(w).Encode(FromModel(movie))
 }
 
-func SearchMovies(w http.ResponseWriter, r *http.Request) {
+func (h *MovieHandler) SearchMovies(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	yearStr := r.URL.Query().Get("year")
 	year := 0
 	if yearStr != "" {
 		year, _ = strconv.Atoi(yearStr)
 	}
-	movies, err := service.SearchMovies(r.Context(), q, year)
+	movies, err := h.Service.SearchMovies(r.Context(), q, year)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(movies)
+	json.NewEncoder(w).Encode(FromModelSlice(movies))
 }
