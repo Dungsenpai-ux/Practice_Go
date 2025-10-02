@@ -1,6 +1,6 @@
-# Mô hình phân lớp (Layered Pattern) trong HTTP API
+# Layered Pattern trong HTTP API
 
-Thành phần HTTP API áp dụng **Layered Pattern**, chia thành 3 tầng chính:
+Phần `http_api` áp dụng **Layered Pattern**, chia thành 3 tầng chính:
 
 ---
 
@@ -21,24 +21,6 @@ Thành phần HTTP API áp dụng **Layered Pattern**, chia thành 3 tầng chí
 
 ---
 
-## Tài liệu chi tiết
-Các tệp tài liệu nằm trong thư mục `docs/`:
-
-| Chủ đề | File |
-|--------|------|
-| Tổng quan dự án | `docs/README.md` |
-| Hướng dẫn setup | `docs/setup.md` |
-| Cấu hình & biến môi trường | `docs/configuration.md` |
-| Observability (Tracing / Tempo / Grafana) | `docs/observability.md` |
-| API chi tiết | `docs/api.md` |
-| Data model & schema | `docs/data-model.md` |
-| Kiến trúc | `docs/architecture.md` |
-| Đóng góp (Contributing) | `docs/contributing.md` |
-
-> Nếu cần gộp hoặc dịch toàn bộ sang một ngôn ngữ thống nhất (chỉ Việt hoặc chỉ Anh) hãy báo để chuẩn hóa.
-
----
-
 ## Cấu trúc thư mục
 
 ```plaintext
@@ -46,13 +28,13 @@ Các tệp tài liệu nằm trong thư mục `docs/`:
     config.go           # Cấu hình và biến môi trường
 /controller
     main.go             # Định nghĩa router
-    [resource].go       # Controller cho từng resource
+    [resource].go       # Controller cho mỗi resource
     dto.go              # Data Transfer Objects
 /model
-    [resource].go       # Model cho từng resource
+    [resource].go       # Model cho mỗi resource
 /service
     db/                 # Tương tác với database
-    [resource].go   # Repository cho từng resource
+        [resource].go   # Repository cho mỗi resource
         db.go           # Khởi tạo kết nối DB
     [external].go       # Tích hợp với dịch vụ bên ngoài
 main.go                 # Entry point của ứng dụng
@@ -61,5 +43,45 @@ main.go                 # Entry point của ứng dụng
 ---
 
 > **Lưu ý:**  
-> - Các tầng được tách bạch rõ ràng giúp dễ bảo trì, mở rộng và kiểm thử.  
-> - Tuân thủ mô hình này giúp tăng tính module hóa và quản lý code hiệu quả hơn trong các dự án Go định hướng microservice.
+> - Các tầng được tách biệt rõ ràng giúp dễ dàng bảo trì, mở rộng và kiểm thử.  
+> - Tuân thủ mô hình này giúp tăng tính module hóa và quản lý code hiệu quả hơn trong các dự án Go microservice.
+
+---
+
+## Tracing (OpenTelemetry + Tempo + Grafana)
+
+### Chạy stack quan sát
+
+```bash
+docker compose -f docker-compose.tracing.yml up -d
+```
+
+Mở Grafana: http://localhost:3000  (admin / admin)
+
+### Biến môi trường
+
+| Variable | Default | Mô tả |
+|----------|---------|-------|
+| OTEL_EXPORTER_OTLP_ENDPOINT | http://localhost:4318 | Tempo OTLP HTTP endpoint |
+| OTEL_SERVICE_NAME | practice-go-api | Tên service trong trace |
+| OTEL_TRACES_SAMPLER | parentbased_always_on | Chiến lược sampling |
+
+Sampling theo tỷ lệ (10%):
+```
+OTEL_TRACES_SAMPLER=ratio:0.1
+```
+
+### Tích hợp mã nguồn
+1. Khởi tạo tracer trong `main.go` (InitTracer + defer shutdown).
+2. `controller/main.go` dùng `otelgin` để tạo span mỗi HTTP request.
+3. Repository `service/db/movie.repository.go` tạo span thủ công cho truy vấn DB.
+
+### Xem trace
+1. Vào Grafana -> Explore -> Chọn Tempo.
+2. Filter Service Name = practice-go-api.
+3. Chọn trace để xem cây span và timing.
+
+### Mở rộng tương lai
+- Thêm logs correlation (trace_id vào log).
+- Thêm metrics OTEL (Prometheus / OpenTelemetry Collector).
+- Export trace sang Jaeger nếu cần.

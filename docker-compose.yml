@@ -1,0 +1,14 @@
+services:
+  memcached:
+    image: memcached:1.6-alpine
+    container_name: memcached_local
+    ports:
+      - "11211:11211"
+    command: ["-m", "128", "-p", "11211", "-u", "memcache", "-l", "0.0.0.0"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "11211"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+

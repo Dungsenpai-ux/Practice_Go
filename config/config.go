@@ -19,6 +19,10 @@ type Config struct {
 	DBSSLMode     string
 	MemcachedAddr string
 	Version       string
+	OtelEndpoint  string
+	OtelService   string
+	OtelEnv       string
+	OtelSampler   string
 }
 
 // Load loads .env (if present) and builds a Config instance.
@@ -34,6 +38,10 @@ func Load() *Config {
 		DBSSLMode:     getEnv("DB_SSLMODE", "disable"),
 		MemcachedAddr: getEnv("MEMCACHED_ADDR", "127.0.0.1:11211"),
 		Version:       "v1.0.0",
+		OtelEndpoint:  getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"),
+		OtelService:   getEnv("OTEL_SERVICE_NAME", "practice-go-api"),
+		OtelEnv:       getEnv("OTEL_ENVIRONMENT", "dev"),
+		OtelSampler:   getEnv("OTEL_TRACES_SAMPLER", "parentbased_always_on"),
 	}
 	cfg.DBUrl = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName, cfg.DBSSLMode)
 	return cfg

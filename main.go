@@ -1,18 +1,31 @@
 package main
 
 import (
+	"context"
 	"log"
+	"time"
 
 	"github.com/Dungsenpai-ux/Practice_Go/config"
 	"github.com/Dungsenpai-ux/Practice_Go/controller"
 	srv "github.com/Dungsenpai-ux/Practice_Go/service"
 	dbrepo "github.com/Dungsenpai-ux/Practice_Go/service/db"
 	"github.com/Dungsenpai-ux/Practice_Go/service/external"
+	"github.com/Dungsenpai-ux/Practice_Go/service/middleware"
 )
 
 // Main: tối giản theo Option B – chỉ gọi các hàm init, route nằm trong controller.
 func main() {
 	cfg := config.Load()
+
+	// Init OpenTelemetry tracer (Tempo OTLP HTTP). Shutdown gracefully on exit.
+	shutdownTracer := middleware.InitTracer(cfg)
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := shutdownTracer(ctx); err != nil {
+			log.Printf("tracer shutdown error: %v", err)
+		}
+	}()
 
 	pool, err := dbrepo.Init(cfg)
 	if err != nil {

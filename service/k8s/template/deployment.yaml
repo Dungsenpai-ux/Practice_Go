@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${APP_NAME}
+  namespace: ${NAMESPACE}
+  labels:
+    app: ${APP_NAME}
+    version: v1
+    environment: ${DEPLOY_ENV}
+spec:
+  replicas: ${REPLICAS}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: ${APP_NAME}
+  template:
+    metadata:
+      labels:
+        app: ${APP_NAME}
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "${PORT}"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: ${APP_NAME}
+        image: ${IMAGE}
+        imagePullPolicy: ${IMAGE_PULL_POLICY}
+        ports:
+        - name: http
+          containerPort: ${PORT}
+          protocol: TCP
+        env:
+        - name: LOG_LEVEL
+          value: "${LOG_LEVEL}"
+        - name: GIN_MODE
+          value: "${GIN_MODE}"
+        - name: PORT
+          value: "${PORT}"
+        - name: DB_HOST
+          value: "${DB_HOST}"
+        - name: DB_PORT
+          value: "${DB_PORT}"
+        - name: DB_NAME
+          value: "${DB_NAME}"
+        - name: DB_USER
+          value: "${DB_USER}"
+        - name: DB_PASSWORD
+          value: "${DB_PASSWORD}"
+        resources:
+          requests:
+            memory: "${MEMORY_REQUEST}"
+            cpu: "${CPU_REQUEST}"
+          limits:
+            memory: "${MEMORY_LIMIT}"
+            cpu: "${CPU_LIMIT}"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: ${PORT}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: ${PORT}
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: ${PORT}
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          failureThreshold: 30
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - ${APP_NAME}
+              topologyKey: kubernetes.io/hostname
