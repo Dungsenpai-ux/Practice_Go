@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: practice-go-local
-  labels:
-    name: practice-go-local
-    environment: local
-    app: practice-go

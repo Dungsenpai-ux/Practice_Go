@@ -11,4 +11,38 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    networks:
+      - app-network
+      
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./service/observability/grafana-datasources:/etc/grafana/provisioning/datasources:ro
+    restart: unless-stopped
+    networks:
+      - app-network
+      
+  tempo:
+    image: grafana/tempo:2.5.0
+    container_name: tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    ports:
+      - "3200:3200"   
+      - "4318:4318"   
+      - "4317:4317"   
+    volumes:
+      - ./tempo-data:/var/tempo
+      - ./service/observability/tempo.yaml:/etc/tempo.yaml:ro
+    restart: unless-stopped
+    networks:
+      - app-network
 
+networks:
+  app-network:
+    driver: bridge
