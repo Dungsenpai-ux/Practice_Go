@@ -14,6 +14,7 @@ RUN apk add --no-cache ca-certificates tzdata curl
 WORKDIR /app
 COPY --from=builder /out/practice-go .
 COPY --from=builder /src/service/migrations ./service/migrations
+COPY --from=builder /src/data ./data
 ENV GIN_MODE=release LOG_LEVEL=info PORT=8080
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD curl -fsS http://127.0.0.1:8080/healthz || exit 1

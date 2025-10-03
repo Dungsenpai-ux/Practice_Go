@@ -31,7 +31,7 @@ func Init(cfg *config.Config) (*pgxpool.Pool, error) {
 }
 
 func runMigrations(dsn string) error {
-	m, err := migrate.New("file:///app/service/migrations", dsn)
+	m, err := migrate.New("file://service/migrations", dsn)
 	if err != nil {
 		return err
 	}
