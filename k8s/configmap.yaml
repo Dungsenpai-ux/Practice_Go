@@ -3,8 +3,17 @@ kind: ConfigMap
 metadata:
   name: practice-go-config
 data:
-  PORT: "8080"
+  APP_ENV: "production"
   DB_HOST: "postgres"
   DB_PORT: "5432"
   DB_NAME: "practice_go"
+  DB_USER: "postgres"
+  # Cache - thử nhiều tên biến
+  CACHE_HOST: "memcached"
+  CACHE_PORT: "11211"
+  MEMCACHED_HOST: "memcached"
+  MEMCACHED_PORT: "11211"
   MEMCACHED_ADDR: "memcached:11211"
+  MEMCACHED_SERVERS: "memcached:11211"
+  # Tracing
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo:4318"
